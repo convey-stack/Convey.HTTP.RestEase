@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using Convey.Discovery.Consul;
+using Convey.HTTP.RestEase.Builders;
 using Convey.HTTP.RestEase.Serializers;
 using Convey.LoadBalancing.Fabio;
 using Convey.LoadBalancing.Fabio.MessageHandlers;
@@ -16,9 +17,34 @@ namespace Convey.HTTP.RestEase
     {
         private const string SectionName = "restEase";
         private const string RegistryName = "http.restEase";
-        
-        
-        public static IConveyBuilder AddServiceForwarder<T>(this IConveyBuilder builder, string serviceName, string sectionName = SectionName)
+
+        public static IConveyBuilder AddServiceForwarder<T>(this IConveyBuilder builder, string serviceName,
+            string sectionName = SectionName, string consulSectionName = "consul", string fabioSectionName = "fabio")
+            where T : class
+        {
+            var options = builder.GetOptions<RestEaseOptions>(sectionName);
+            return builder.AddServiceForwarder<T>(serviceName, options,
+                b => b.AddFabio(fabioSectionName, consulSectionName));
+        }
+
+        public static IConveyBuilder AddServiceForwarder<T>(this IConveyBuilder builder, string serviceName,
+            Func<IRestEaseOptionsBuilder, IRestEaseOptionsBuilder> buildOptions,
+            Func<IConsulOptionsBuilder, IConsulOptionsBuilder> buildConsulOptions,
+            Func<IFabioOptionsBuilder, IFabioOptionsBuilder> buildFabioOptions)
+            where T : class
+        {
+            var options = buildOptions(new RestEaseOptionsBuilder()).Build();
+            return builder.AddServiceForwarder<T>(serviceName, options,
+                b => b.AddFabio(buildFabioOptions, buildConsulOptions));
+        }
+
+        public static IConveyBuilder AddServiceForwarder<T>(this IConveyBuilder builder, string serviceName,
+            RestEaseOptions options, ConsulOptions consulOptions, FabioOptions fabioOptions)
+            where T : class
+            => builder.AddServiceForwarder<T>(serviceName, options, b => b.AddFabio(fabioOptions, consulOptions));
+
+        private static IConveyBuilder AddServiceForwarder<T>(this IConveyBuilder builder, string serviceName, 
+            RestEaseOptions options, Action<IConveyBuilder> registerFabio)
             where T : class
         {
             if (!builder.TryRegister(RegistryName))
@@ -27,7 +53,7 @@ namespace Convey.HTTP.RestEase
             }
             
             var clientName = typeof(T).ToString();
-            var options = builder.GetOptions<RestEaseOptions>(sectionName);
+            
             switch (options.LoadBalancer?.ToLowerInvariant())
             {
                 case "consul":
@@ -43,8 +69,9 @@ namespace Convey.HTTP.RestEase
 
             ConfigureForwarder<T>(builder.Services, clientName);
 
-            return builder
-                .AddConsul();
+            registerFabio(builder);
+
+            return builder;
         }
 
         private static void ConfigureDefaultClient(IServiceCollection services, string clientName,
