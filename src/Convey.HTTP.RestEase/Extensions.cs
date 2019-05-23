@@ -5,10 +5,7 @@ using Convey.Discovery.Consul;
 using Convey.HTTP.RestEase.Builders;
 using Convey.HTTP.RestEase.Serializers;
 using Convey.LoadBalancing.Fabio;
-using Convey.LoadBalancing.Fabio.MessageHandlers;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using RestEase;
 
 namespace Convey.HTTP.RestEase
