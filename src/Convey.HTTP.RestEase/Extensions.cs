@@ -16,29 +16,33 @@ namespace Convey.HTTP.RestEase
         private const string RegistryName = "http.restEase";
 
         public static IConveyBuilder AddServiceClient<T>(this IConveyBuilder builder, string serviceName,
-            string sectionName = SectionName, string consulSectionName = "consul", string fabioSectionName = "fabio")
+            string sectionName = SectionName, string consulSectionName = "consul", string fabioSectionName = "fabio",
+            string httpClientSectionName = "httpClient")
             where T : class
         {
-            var options = builder.GetOptions<RestEaseOptions>(sectionName);
-            return builder.AddServiceClient<T>(serviceName, options,
-                b => b.AddFabio(fabioSectionName, consulSectionName));
+            var restEaseOptions = builder.GetOptions<RestEaseOptions>(sectionName);
+            return builder.AddServiceClient<T>(serviceName, restEaseOptions,
+                b => b.AddFabio(fabioSectionName, consulSectionName, httpClientSectionName));
         }
 
         public static IConveyBuilder AddServiceClient<T>(this IConveyBuilder builder, string serviceName,
             Func<IRestEaseOptionsBuilder, IRestEaseOptionsBuilder> buildOptions,
             Func<IConsulOptionsBuilder, IConsulOptionsBuilder> buildConsulOptions,
-            Func<IFabioOptionsBuilder, IFabioOptionsBuilder> buildFabioOptions)
+            Func<IFabioOptionsBuilder, IFabioOptionsBuilder> buildFabioOptions,
+            HttpClientOptions httpClientOptions)
             where T : class
         {
             var options = buildOptions(new RestEaseOptionsBuilder()).Build();
             return builder.AddServiceClient<T>(serviceName, options,
-                b => b.AddFabio(buildFabioOptions, buildConsulOptions));
+                b => b.AddFabio(buildFabioOptions, buildConsulOptions, httpClientOptions));
         }
 
         public static IConveyBuilder AddServiceClient<T>(this IConveyBuilder builder, string serviceName,
-            RestEaseOptions options, ConsulOptions consulOptions, FabioOptions fabioOptions)
+            RestEaseOptions options, ConsulOptions consulOptions, FabioOptions fabioOptions,
+            HttpClientOptions httpClientOptions)
             where T : class
-            => builder.AddServiceClient<T>(serviceName, options, b => b.AddFabio(fabioOptions, consulOptions));
+            => builder.AddServiceClient<T>(serviceName, options,
+                b => b.AddFabio(fabioOptions, consulOptions, httpClientOptions));
 
         private static IConveyBuilder AddServiceClient<T>(this IConveyBuilder builder, string serviceName, 
             RestEaseOptions options, Action<IConveyBuilder> registerFabio)
